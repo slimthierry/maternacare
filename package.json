@@ -1,0 +1,25 @@
+{
+  "name": "maternacare",
+  "version": "1.0.0",
+  "private": true,
+  "description": "MaternaCare - Module SIH de suivi de grossesse et santé maternelle",
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "test": "turbo run test",
+    "clean": "turbo run clean",
+    "dev:web": "turbo run dev --filter=@maternacare/web",
+    "build:web": "turbo run build --filter=@maternacare/web",
+    "dev:backend": "cd backend && uvicorn app.main:app --reload --port 9700"
+  },
+  "devDependencies": {
+    "turbo": "^2.3.0",
+    "typescript": "^5.7.0"
+  },
+  "packageManager": "pnpm@9.15.0",
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=9.0.0"
+  }
+}

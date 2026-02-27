@@ -1,0 +1,60 @@
+version: '3.9'
+
+services:
+  postgres:
+    image: postgres:15
+    container_name: maternacare-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: maternacare
+      POSTGRES_USER: maternacare
+      POSTGRES_PASSWORD: maternacare_secret
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U maternacare']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7
+    container_name: maternacare-redis
+    restart: unless-stopped
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: maternacare-backend
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql+asyncpg://maternacare:maternacare_secret@postgres:5432/maternacare
+      REDIS_URL: redis://redis:6379/0
+      SECRET_KEY: maternacare-secret-key-change-in-production
+      CORS_ORIGINS: http://localhost:4000
+      ENVIRONMENT: development
+    ports:
+      - '9700:9700'
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+
+volumes:
+  postgres_data:
+  redis_data:
