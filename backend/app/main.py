@@ -3,10 +3,10 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.fhir import fhir_router
-from app.api.v1 import api_v1_router
 from app.config.settings import settings
+from app.loggers import setup_logging
 from app.middleware.audit_middleware import AuditMiddleware
+from app.routes import app_router
 
 app = FastAPI(
     title=settings.APP_NAME,
@@ -28,9 +28,11 @@ app.add_middleware(
 # Audit middleware
 app.add_middleware(AuditMiddleware)
 
+# Logging
+setup_logging()
+
 # API routers
-app.include_router(api_v1_router)
-app.include_router(fhir_router)
+app.include_router(app_router)
 
 
 @app.get("/health")

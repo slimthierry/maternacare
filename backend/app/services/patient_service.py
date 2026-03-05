@@ -3,7 +3,7 @@
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.exceptions import ConflictException, NotFoundException
+from app.auth.exceptions import ConflictException, NotFoundException
 from app.models.patient_models import Patient
 from app.schemas.patient_schemas import (
     PatientCreate,

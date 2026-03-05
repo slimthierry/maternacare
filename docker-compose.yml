@@ -55,6 +55,42 @@ services:
     volumes:
       - ./backend:/app
 
+  celery-worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: maternacare-celery-worker
+    restart: unless-stopped
+    command: celery -A app.celery_app worker --loglevel=info
+    environment:
+      DATABASE_URL: postgresql+asyncpg://maternacare:maternacare_secret@postgres:5432/maternacare
+      REDIS_URL: redis://redis:6379/0
+      SECRET_KEY: maternacare-secret-key-change-in-production
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+
+  celery-beat:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: maternacare-celery-beat
+    restart: unless-stopped
+    command: celery -A app.celery_app beat --loglevel=info
+    environment:
+      DATABASE_URL: postgresql+asyncpg://maternacare:maternacare_secret@postgres:5432/maternacare
+      REDIS_URL: redis://redis:6379/0
+      SECRET_KEY: maternacare-secret-key-change-in-production
+    depends_on:
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+
 volumes:
   postgres_data:
   redis_data:

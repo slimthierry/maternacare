@@ -3,7 +3,7 @@
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.exceptions import NotFoundException
+from app.auth.exceptions import NotFoundException
 from app.models.consultation_models import Consultation
 from app.models.pregnancy_models import Pregnancy
 from app.models.user_models import User

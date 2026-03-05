@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.exceptions import ConflictException, NotFoundException
+from app.auth.exceptions import ConflictException, NotFoundException
 from app.models.alert_models import Alert
 from app.models.delivery_models import Delivery
 from app.models.newborn_models import Newborn

@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.exceptions import NotFoundException
+from app.auth.exceptions import NotFoundException
 from app.models.alert_models import Alert
 from app.models.postpartum_models import PostPartum
 from app.models.pregnancy_models import Pregnancy
