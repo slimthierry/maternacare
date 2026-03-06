@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { Sun, Moon, Monitor, Bell, LogOut } from 'lucide-react';
+import { Sun, Moon, Monitor, Bell, LogOut, Menu } from 'lucide-react';
 import { useTheme } from '../ThemeProvider';
 import { useAuth } from '../../hooks/useAuth';
 
@@ -34,7 +34,11 @@ function ThemeToggleIcon() {
   );
 }
 
-export function Header() {
+interface HeaderProps {
+  onMenuToggle?: () => void;
+}
+
+export function Header({ onMenuToggle }: HeaderProps) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
@@ -48,9 +52,17 @@ export function Header() {
     : '??';
 
   return (
-    <header className="h-16 bg-[var(--color-bg-card)] border-b border-[var(--color-border-primary)] flex items-center justify-between px-6">
-      <div>
-        <h2 className="text-sm font-medium text-[var(--color-text-secondary)]">
+    <header className="h-16 bg-[var(--color-bg-card)] border-b border-[var(--color-border-primary)] flex items-center justify-between px-4 md:px-6">
+      <div className="flex items-center gap-3">
+        {onMenuToggle && (
+          <button
+            onClick={onMenuToggle}
+            className="lg:hidden p-2 rounded-lg text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-tertiary)] hover:text-[var(--color-text-primary)] transition-colors"
+          >
+            <Menu className="w-5 h-5" />
+          </button>
+        )}
+        <h2 className="text-sm font-medium text-[var(--color-text-secondary)] hidden sm:block">
           Module SIH - Suivi de grossesse
         </h2>
       </div>

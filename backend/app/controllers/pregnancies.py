@@ -1,6 +1,10 @@
 """Pregnancy management endpoints."""
 
+import csv
+import io
+
 from fastapi import APIRouter, Depends, Query
+from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config.database import get_db
@@ -40,6 +44,32 @@ async def list_pregnancies(
 ):
     """List pregnancies with filters and pagination."""
     return await pregnancy_service.list_pregnancies(db, page, page_size, status, patient_id)
+
+
+@router.get("/export/csv")
+async def export_pregnancies_csv(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_permission("pregnancies:read")),
+):
+    """Export all pregnancies as CSV file."""
+    result = await pregnancy_service.list_pregnancies(db, page=1, page_size=10000)
+
+    output = io.StringIO()
+    writer = csv.writer(output, delimiter=";")
+    writer.writerow(["ID", "Patient ID", "DDR", "DPA", "DPA reelle", "Statut", "Risque", "Gravida", "Para", "Notes"])
+    for p in result.items:
+        writer.writerow([
+            p.id, p.patient_id, p.lmp_date, p.estimated_due_date,
+            p.actual_due_date or "", p.status, p.risk_level,
+            p.gravida, p.para, p.notes or "",
+        ])
+
+    output.seek(0)
+    return StreamingResponse(
+        iter([output.getvalue()]),
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=grossesses_maternacare.csv"},
+    )
 
 
 @router.get("/{pregnancy_id}", response_model=PregnancyDetailResponse)

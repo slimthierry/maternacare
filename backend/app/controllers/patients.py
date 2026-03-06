@@ -1,6 +1,10 @@
 """Patient management endpoints."""
 
+import csv
+import io
+
 from fastapi import APIRouter, Depends, Query
+from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config.database import get_db
@@ -82,3 +86,25 @@ async def delete_patient(
 ):
     """Delete a patient record."""
     await patient_service.delete_patient(db, patient_id)
+
+
+@router.get("/export/csv")
+async def export_patients_csv(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_permission("patients:read")),
+):
+    """Export all patients as CSV file."""
+    result = await patient_service.list_patients(db, page=1, page_size=10000)
+
+    output = io.StringIO()
+    writer = csv.writer(output, delimiter=";")
+    writer.writerow(["IPP", "Nom", "Prenom", "Date de naissance", "Groupe sanguin", "Rhesus", "Telephone", "Contact urgence"])
+    for p in result.items:
+        writer.writerow([p.ipp, p.last_name, p.first_name, p.date_of_birth, p.blood_type or "", p.rh_factor or "", p.phone or "", p.emergency_contact or ""])
+
+    output.seek(0)
+    return StreamingResponse(
+        iter([output.getvalue()]),
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=patients_maternacare.csv"},
+    )

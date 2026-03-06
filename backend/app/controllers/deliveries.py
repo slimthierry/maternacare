@@ -1,6 +1,10 @@
 """Delivery management endpoints."""
 
+import csv
+import io
+
 from fastapi import APIRouter, Depends, Query
+from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config.database import get_db
@@ -60,3 +64,29 @@ async def update_delivery(
     """Update a delivery record."""
     delivery = await delivery_service.update_delivery(db, delivery_id, data)
     return DeliveryResponse.model_validate(delivery)
+
+
+@router.get("/export/csv")
+async def export_deliveries_csv(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_permission("deliveries:read")),
+):
+    """Export all deliveries as CSV file."""
+    result = await delivery_service.list_deliveries(db, page=1, page_size=10000)
+
+    output = io.StringIO()
+    writer = csv.writer(output, delimiter=";")
+    writer.writerow(["ID", "Grossesse ID", "Date", "SA", "Mode", "Duree travail (h)", "Anesthesie", "Perte sang (ml)", "Complications", "Notes"])
+    for d in result.items:
+        writer.writerow([
+            d.id, d.pregnancy_id, d.date, d.gestational_week, d.delivery_type,
+            d.labor_duration_hours or "", d.anesthesia_type, d.blood_loss_ml or "",
+            ", ".join(d.complications) if d.complications else "", d.notes or "",
+        ])
+
+    output.seek(0)
+    return StreamingResponse(
+        iter([output.getvalue()]),
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=accouchements_maternacare.csv"},
+    )

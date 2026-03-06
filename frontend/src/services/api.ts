@@ -31,20 +31,82 @@ function getHeaders(): HeadersInit {
   return headers;
 }
 
+const fieldLabels: Record<string, string> = {
+  date_of_birth: 'Date de naissance',
+  first_name: 'Prenom',
+  last_name: 'Nom',
+  ipp: 'IPP',
+  blood_type: 'Groupe sanguin',
+  rh_factor: 'Rhesus',
+  phone: 'Telephone',
+  emergency_contact: 'Contact urgence',
+  date: 'Date',
+  pregnancy_id: 'Grossesse',
+  gestational_week: 'Semaine amenorrhee',
+  delivery_type: 'Mode accouchement',
+  weight_kg: 'Poids',
+  blood_pressure_systolic: 'TA systolique',
+  blood_pressure_diastolic: 'TA diastolique',
+  lmp_date: 'Date dernieres regles',
+  estimated_due_date: 'Date prevue accouchement',
+  next_appointment: 'Prochain RDV',
+};
+
+function formatValidationErrors(error: Record<string, unknown>): string {
+  if (Array.isArray(error.detail)) {
+    return error.detail
+      .map((e: { loc?: string[]; msg?: string; field?: string; message?: string }) => {
+        const rawField = e.field ?? e.loc?.slice(-1)[0] ?? '';
+        const label = fieldLabels[rawField] ?? rawField;
+        const msg = e.message ?? e.msg ?? '';
+        return label ? `${label} : ${msg}` : msg;
+      })
+      .filter(Boolean)
+      .join('. ');
+  }
+  if (typeof error.detail === 'string') return error.detail;
+  return '';
+}
+
 async function request<T>(
   method: string,
   path: string,
   body?: unknown,
 ): Promise<T> {
-  const response = await fetch(`${BASE_URL}${path}`, {
-    method,
-    headers: getHeaders(),
-    body: body ? JSON.stringify(body) : undefined,
-  });
+  let response: Response;
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 30_000);
+    response = await fetch(`${BASE_URL}${path}`, {
+      method,
+      headers: getHeaders(),
+      body: body ? JSON.stringify(body) : undefined,
+      signal: controller.signal,
+    });
+    clearTimeout(timeout);
+  } catch (err) {
+    if (err instanceof DOMException && err.name === 'AbortError') {
+      throw new Error('La requete a expire (timeout). Verifiez votre connexion.');
+    }
+    throw new Error('Erreur reseau. Verifiez votre connexion internet.');
+  }
 
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ detail: 'Request failed' }));
-    throw new Error(error.detail || `HTTP ${response.status}`);
+    if (response.status === 401 && !path.includes('/auth/login')) {
+      localStorage.removeItem('maternacare-token');
+      window.location.href = '/login';
+      throw new Error('Session expiree. Veuillez vous reconnecter.');
+    }
+
+    const error = await response.json().catch(() => ({ detail: '' }));
+    const message =
+      formatValidationErrors(error) ||
+      (response.status === 403 ? 'Acces non autorise' : '') ||
+      (response.status === 404 ? 'Ressource introuvable' : '') ||
+      (response.status === 409 ? 'Conflit: cette donnee existe deja' : '') ||
+      (response.status >= 500 ? 'Erreur serveur. Reessayez plus tard.' : '') ||
+      `Erreur HTTP ${response.status}`;
+    throw new Error(message);
   }
 
   if (response.status === 204) {
@@ -86,6 +148,21 @@ export const patients = {
     request<Patient>('PUT', `/patients/${id}`, data),
 
   delete: (id: number) => request<void>('DELETE', `/patients/${id}`),
+
+  exportCsv: async () => {
+    const token = localStorage.getItem('maternacare-token');
+    const res = await fetch(`${BASE_URL}/patients/export/csv`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+    if (!res.ok) throw new Error('Erreur export CSV');
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'patients_maternacare.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  },
 };
 
 // --- Pregnancies ---
@@ -105,6 +182,21 @@ export const pregnancies = {
 
   update: (id: number, data: Partial<Pregnancy>) =>
     request<Pregnancy>('PUT', `/pregnancies/${id}`, data),
+
+  exportCsv: async () => {
+    const token = localStorage.getItem('maternacare-token');
+    const res = await fetch(`${BASE_URL}/pregnancies/export/csv`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+    if (!res.ok) throw new Error('Erreur export CSV');
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'grossesses_maternacare.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  },
 };
 
 // --- Consultations ---
@@ -123,6 +215,21 @@ export const consultations = {
 
   update: (id: number, data: Partial<Consultation>) =>
     request<Consultation>('PUT', `/consultations/${id}`, data),
+
+  exportCsv: async () => {
+    const token = localStorage.getItem('maternacare-token');
+    const res = await fetch(`${BASE_URL}/consultations/export/csv`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+    if (!res.ok) throw new Error('Erreur export CSV');
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'consultations_maternacare.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  },
 };
 
 // --- Ultrasounds ---
@@ -141,6 +248,21 @@ export const ultrasounds = {
 
   update: (id: number, data: Partial<Ultrasound>) =>
     request<Ultrasound>('PUT', `/ultrasounds/${id}`, data),
+
+  exportCsv: async () => {
+    const token = localStorage.getItem('maternacare-token');
+    const res = await fetch(`${BASE_URL}/ultrasounds/export/csv`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+    if (!res.ok) throw new Error('Erreur export CSV');
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'echographies_maternacare.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  },
 };
 
 // --- Deliveries ---
@@ -156,6 +278,21 @@ export const deliveries = {
 
   update: (id: number, data: Partial<Delivery>) =>
     request<Delivery>('PUT', `/deliveries/${id}`, data),
+
+  exportCsv: async () => {
+    const token = localStorage.getItem('maternacare-token');
+    const res = await fetch(`${BASE_URL}/deliveries/export/csv`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+    if (!res.ok) throw new Error('Erreur export CSV');
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'accouchements_maternacare.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  },
 };
 
 // --- Newborns ---
@@ -171,6 +308,21 @@ export const newborns = {
 
   update: (id: number, data: Partial<Newborn>) =>
     request<Newborn>('PUT', `/newborns/${id}`, data),
+
+  exportCsv: async () => {
+    const token = localStorage.getItem('maternacare-token');
+    const res = await fetch(`${BASE_URL}/newborns/export/csv`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+    if (!res.ok) throw new Error('Erreur export CSV');
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'nouveaux_nes_maternacare.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  },
 };
 
 // --- PostPartum ---
@@ -189,6 +341,21 @@ export const postpartum = {
 
   update: (id: number, data: Partial<PostPartumVisit>) =>
     request<PostPartumVisit>('PUT', `/postpartum/${id}`, data),
+
+  exportCsv: async () => {
+    const token = localStorage.getItem('maternacare-token');
+    const res = await fetch(`${BASE_URL}/postpartum/export/csv`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+    if (!res.ok) throw new Error('Erreur export CSV');
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'postpartum_maternacare.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  },
 };
 
 // --- Alerts ---

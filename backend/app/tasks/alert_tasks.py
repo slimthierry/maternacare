@@ -24,28 +24,47 @@ def _run_async(coro):
         loop.close()
 
 
-@celery_app.task(name="app.tasks.alert_tasks.process_alert_webhook")
+@celery_app.task(
+    name="app.tasks.alert_tasks.process_alert_webhook",
+    bind=True,
+    max_retries=3,
+    default_retry_delay=60,
+)
 def process_alert_webhook(
+    self,
     alert_type: str,
     alert_data: dict,
     patient_ipp: str | None = None,
 ) -> bool:
     """Process an alert and send webhook notification."""
     logger.info("Processing alert webhook: %s", alert_type)
-    return _run_async(
-        send_webhook(
-            event_type=alert_type,
-            data=alert_data,
-            patient_ipp=patient_ipp,
+    try:
+        return _run_async(
+            send_webhook(
+                event_type=alert_type,
+                data=alert_data,
+                patient_ipp=patient_ipp,
+            )
         )
-    )
+    except Exception as exc:
+        logger.error("Webhook failed for %s (attempt %d): %s", alert_type, self.request.retries + 1, exc)
+        raise self.retry(exc=exc)
 
 
-@celery_app.task(name="app.tasks.alert_tasks.check_upcoming_deliveries")
-def check_upcoming_deliveries() -> int:
+@celery_app.task(
+    name="app.tasks.alert_tasks.check_upcoming_deliveries",
+    bind=True,
+    max_retries=2,
+    default_retry_delay=300,
+)
+def check_upcoming_deliveries(self) -> int:
     """Check for pregnancies near due date and create delivery_imminent alerts."""
     logger.info("Checking for upcoming deliveries...")
-    return _run_async(_check_upcoming_deliveries_async())
+    try:
+        return _run_async(_check_upcoming_deliveries_async())
+    except Exception as exc:
+        logger.error("check_upcoming_deliveries failed (attempt %d): %s", self.request.retries + 1, exc)
+        raise self.retry(exc=exc)
 
 
 async def _check_upcoming_deliveries_async() -> int:
@@ -93,11 +112,20 @@ async def _check_upcoming_deliveries_async() -> int:
     return alerts_created
 
 
-@celery_app.task(name="app.tasks.alert_tasks.check_overdue_appointments")
-def check_overdue_appointments() -> int:
+@celery_app.task(
+    name="app.tasks.alert_tasks.check_overdue_appointments",
+    bind=True,
+    max_retries=2,
+    default_retry_delay=300,
+)
+def check_overdue_appointments(self) -> int:
     """Check for overdue prenatal appointments and create alerts."""
     logger.info("Checking for overdue appointments...")
-    return _run_async(_check_overdue_appointments_async())
+    try:
+        return _run_async(_check_overdue_appointments_async())
+    except Exception as exc:
+        logger.error("check_overdue_appointments failed (attempt %d): %s", self.request.retries + 1, exc)
+        raise self.retry(exc=exc)
 
 
 async def _check_overdue_appointments_async() -> int:

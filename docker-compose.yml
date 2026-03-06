@@ -1,16 +1,22 @@
 version: '3.9'
 
+x-common-env: &common-env
+  DATABASE_URL: postgresql+asyncpg://maternacare:${POSTGRES_PASSWORD:-maternacare_secret}@postgres:5432/maternacare
+  REDIS_URL: redis://redis:6379/0
+  SECRET_KEY: ${SECRET_KEY:-maternacare-secret-key-change-in-production}
+
 services:
   postgres:
     image: postgres:15
+    platform: linux/arm64
     container_name: maternacare-postgres
     restart: unless-stopped
     environment:
       POSTGRES_DB: maternacare
       POSTGRES_USER: maternacare
-      POSTGRES_PASSWORD: maternacare_secret
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-maternacare_secret}
     ports:
-      - '5432:5432'
+      - '5434:5432'
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -18,9 +24,14 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 512M
 
   redis:
     image: redis:7
+    platform: linux/arm64
     container_name: maternacare-redis
     restart: unless-stopped
     ports:
@@ -32,6 +43,10 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 256M
 
   backend:
     build:
@@ -40,11 +55,9 @@ services:
     container_name: maternacare-backend
     restart: unless-stopped
     environment:
-      DATABASE_URL: postgresql+asyncpg://maternacare:maternacare_secret@postgres:5432/maternacare
-      REDIS_URL: redis://redis:6379/0
-      SECRET_KEY: maternacare-secret-key-change-in-production
-      CORS_ORIGINS: http://localhost:4000
-      ENVIRONMENT: development
+      <<: *common-env
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:4000}
+      ENVIRONMENT: ${ENVIRONMENT:-development}
     ports:
       - '9700:9700'
     depends_on:
@@ -54,6 +67,10 @@ services:
         condition: service_healthy
     volumes:
       - ./backend:/app
+    deploy:
+      resources:
+        limits:
+          memory: 512M
 
   celery-worker:
     build:
@@ -61,11 +78,9 @@ services:
       dockerfile: Dockerfile
     container_name: maternacare-celery-worker
     restart: unless-stopped
-    command: celery -A app.celery_app worker --loglevel=info
+    command: celery -A app.celery_app worker --loglevel=info --concurrency=2
     environment:
-      DATABASE_URL: postgresql+asyncpg://maternacare:maternacare_secret@postgres:5432/maternacare
-      REDIS_URL: redis://redis:6379/0
-      SECRET_KEY: maternacare-secret-key-change-in-production
+      <<: *common-env
     depends_on:
       postgres:
         condition: service_healthy
@@ -73,6 +88,10 @@ services:
         condition: service_healthy
     volumes:
       - ./backend:/app
+    deploy:
+      resources:
+        limits:
+          memory: 384M
 
   celery-beat:
     build:
@@ -82,14 +101,16 @@ services:
     restart: unless-stopped
     command: celery -A app.celery_app beat --loglevel=info
     environment:
-      DATABASE_URL: postgresql+asyncpg://maternacare:maternacare_secret@postgres:5432/maternacare
-      REDIS_URL: redis://redis:6379/0
-      SECRET_KEY: maternacare-secret-key-change-in-production
+      <<: *common-env
     depends_on:
       redis:
         condition: service_healthy
     volumes:
       - ./backend:/app
+    deploy:
+      resources:
+        limits:
+          memory: 256M
 
 volumes:
   postgres_data:

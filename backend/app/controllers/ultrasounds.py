@@ -1,6 +1,10 @@
 """Ultrasound management endpoints."""
 
+import csv
+import io
+
 from fastapi import APIRouter, Depends, Query
+from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config.database import get_db
@@ -38,6 +42,36 @@ async def list_ultrasounds(
 ):
     """List ultrasounds with optional filter and pagination."""
     return await ultrasound_service.list_ultrasounds(db, page, page_size, pregnancy_id)
+
+
+@router.get("/export/csv")
+async def export_ultrasounds_csv(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_permission("ultrasounds:read")),
+):
+    """Export all ultrasounds as CSV file."""
+    result = await ultrasound_service.list_ultrasounds(db, page=1, page_size=10000)
+
+    output = io.StringIO()
+    writer = csv.writer(output, delimiter=";")
+    writer.writerow(["ID", "Grossesse ID", "Date", "SA", "Type", "Poids foetal (g)", "BPD (mm)", "LF (mm)", "CA (mm)", "ILA", "Placenta", "RCF", "Anomalies", "Notes"])
+    for us in result.items:
+        writer.writerow([
+            us.id, us.pregnancy_id, us.date, us.gestational_week, us.type,
+            us.fetal_weight_g or "", us.biparietal_diameter_mm or "",
+            us.femur_length_mm or "", us.abdominal_circumference_mm or "",
+            us.amniotic_fluid_index or "", us.placenta_position or "",
+            us.fetal_heart_rate or "",
+            ", ".join(us.anomalies_detected) if us.anomalies_detected else "",
+            us.notes or "",
+        ])
+
+    output.seek(0)
+    return StreamingResponse(
+        iter([output.getvalue()]),
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=echographies_maternacare.csv"},
+    )
 
 
 @router.get("/{ultrasound_id}", response_model=UltrasoundResponse)

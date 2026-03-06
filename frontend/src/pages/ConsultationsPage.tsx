@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Stethoscope, Plus, Calendar, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
-import type { Consultation, PaginatedResponse } from '../types';
-import { consultations } from '../services/api';
+import { Stethoscope, Plus, Calendar, Loader2, ChevronLeft, ChevronRight, Download, Printer, CheckCircle2 } from 'lucide-react';
+import type { Consultation, Pregnancy, PaginatedResponse } from '../types';
+import { consultations, pregnancies } from '../services/api';
 
 const typeLabels: Record<string, string> = {
   routine: 'Routine',
@@ -9,29 +9,31 @@ const typeLabels: Record<string, string> = {
   specialist: 'Specialiste',
 };
 
+const today = new Date().toISOString().split('T')[0];
+
 export function ConsultationsPage() {
   const [view, setView] = useState<'list' | 'form'>('list');
   const [data, setData] = useState<PaginatedResponse<Consultation> | null>(null);
+  const [pregnancyList, setPregnancyList] = useState<Pregnancy[]>([]);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
 
-  // Form state
   const [formData, setFormData] = useState({
     pregnancy_id: '',
     date: '',
     gestational_week: '',
-    consultation_type: 'routine' as 'routine' | 'urgent' | 'specialist',
+    consultation_type: 'routine' as string,
     weight_kg: '',
     blood_pressure_systolic: '',
     blood_pressure_diastolic: '',
     uterine_height_cm: '',
     fetal_heart_rate: '',
     glycemia: '',
-    proteinuria: 'negative' as string,
-    edema: 'none' as string,
+    proteinuria: 'negative',
+    edema: 'none',
     next_appointment: '',
     notes: '',
   });
@@ -45,14 +47,43 @@ export function ConsultationsPage() {
       .finally(() => setLoading(false));
   };
 
+  useEffect(() => { fetchData(); }, [page]);
+
+  // Load pregnancies when opening form
   useEffect(() => {
-    fetchData();
-  }, [page]);
+    if (view === 'form') {
+      pregnancies.list(1, 100, 'active').then((res) => setPregnancyList(res.items)).catch(() => {});
+    }
+  }, [view]);
 
   const totalPages = data ? Math.ceil(data.total / data.page_size) : 0;
 
+  // Auto-calculate gestational week from pregnancy LMP + consultation date
+  const selectedPregnancy = pregnancyList.find((p) => String(p.id) === formData.pregnancy_id);
+
+  const autoCalculateSA = (pregnancyId: string, dateStr: string) => {
+    const preg = pregnancyList.find((p) => String(p.id) === pregnancyId);
+    if (preg && dateStr) {
+      const lmp = new Date(preg.lmp_date);
+      const d = new Date(dateStr);
+      const weeks = Math.floor((d.getTime() - lmp.getTime()) / (7 * 24 * 60 * 60 * 1000));
+      if (weeks >= 1 && weeks <= 45) return String(weeks);
+    }
+    return '';
+  };
+
   const handleInputChange = (field: string, value: string) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
+    setFormData((prev) => {
+      const next = { ...prev, [field]: value };
+      // Auto-calculate SA when pregnancy or date changes
+      if (field === 'pregnancy_id' || field === 'date') {
+        const pid = field === 'pregnancy_id' ? value : prev.pregnancy_id;
+        const d = field === 'date' ? value : prev.date;
+        const sa = autoCalculateSA(pid, d);
+        if (sa) next.gestational_week = sa;
+      }
+      return next;
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -65,7 +96,6 @@ export function ConsultationsPage() {
         date: formData.date,
         gestational_week: Number(formData.gestational_week),
         consultation_type: formData.consultation_type,
-        practitioner_id: 1,
       };
       if (formData.weight_kg) payload.weight_kg = Number(formData.weight_kg);
       if (formData.blood_pressure_systolic) payload.blood_pressure_systolic = Number(formData.blood_pressure_systolic);
@@ -83,7 +113,7 @@ export function ConsultationsPage() {
       setPage(1);
       fetchData();
     } catch (e) {
-      setSubmitError(e instanceof Error ? e.message : 'Erreur lors de l\'enregistrement');
+      setSubmitError(e instanceof Error ? e.message : "Erreur lors de l'enregistrement");
     } finally {
       setSubmitting(false);
     }
@@ -101,22 +131,28 @@ export function ConsultationsPage() {
             Enregistrement et suivi des consultations
           </p>
         </div>
-        <button
-          onClick={() => setView(view === 'list' ? 'form' : 'list')}
-          className="btn-primary flex items-center gap-2"
-        >
-          {view === 'list' ? (
+        <div className="flex items-center gap-2 print:hidden">
+          {view === 'list' && (
             <>
-              <Plus className="w-4 h-4" />
-              Nouvelle consultation
-            </>
-          ) : (
-            <>
-              <Calendar className="w-4 h-4" />
-              Voir historique
+              <button onClick={() => consultations.exportCsv()} className="btn-secondary flex items-center gap-2 text-sm">
+                <Download className="w-4 h-4" />CSV
+              </button>
+              <button onClick={() => window.print()} className="btn-secondary flex items-center gap-2 text-sm">
+                <Printer className="w-4 h-4" />Imprimer
+              </button>
             </>
           )}
-        </button>
+          <button
+            onClick={() => setView(view === 'list' ? 'form' : 'list')}
+            className="btn-primary flex items-center gap-2"
+          >
+            {view === 'list' ? (
+              <><Plus className="w-4 h-4" />Nouvelle consultation</>
+            ) : (
+              <><Calendar className="w-4 h-4" />Voir historique</>
+            )}
+          </button>
+        </div>
       </div>
 
       {view === 'form' ? (
@@ -131,47 +167,32 @@ export function ConsultationsPage() {
           )}
           <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-1.5">ID Grossesse</label>
-              <input
-                type="number"
-                min="1"
+              <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-1.5">Grossesse *</label>
+              <select
                 required
                 value={formData.pregnancy_id}
                 onChange={(e) => handleInputChange('pregnancy_id', e.target.value)}
                 className="input-field w-full"
-                placeholder="ID"
-              />
+              >
+                <option value="">-- Selectionner une grossesse --</option>
+                {pregnancyList.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    #{p.id} - DPA: {p.estimated_due_date} (G{p.gravida}P{p.para})
+                  </option>
+                ))}
+              </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-1.5">Date</label>
-              <input
-                type="date"
-                required
-                value={formData.date}
-                onChange={(e) => handleInputChange('date', e.target.value)}
-                className="input-field w-full"
-              />
+              <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-1.5">Date *</label>
+              <input type="date" required max={today} value={formData.date} onChange={(e) => handleInputChange('date', e.target.value)} className="input-field w-full" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-1.5">Semaine d'amenorrhee</label>
-              <input
-                type="number"
-                min="1"
-                max="45"
-                required
-                value={formData.gestational_week}
-                onChange={(e) => handleInputChange('gestational_week', e.target.value)}
-                className="input-field w-full"
-                placeholder="SA"
-              />
+              <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-1.5">Semaine d'amenorrhee *</label>
+              <input type="number" min="1" max="45" required value={formData.gestational_week} onChange={(e) => handleInputChange('gestational_week', e.target.value)} className="input-field w-full" placeholder="SA" />
             </div>
             <div>
               <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-1.5">Type</label>
-              <select
-                value={formData.consultation_type}
-                onChange={(e) => handleInputChange('consultation_type', e.target.value)}
-                className="input-field w-full"
-              >
+              <select value={formData.consultation_type} onChange={(e) => handleInputChange('consultation_type', e.target.value)} className="input-field w-full">
                 <option value="routine">Routine</option>
                 <option value="urgent">Urgent</option>
                 <option value="specialist">Specialiste</option>
@@ -179,74 +200,41 @@ export function ConsultationsPage() {
             </div>
             <div>
               <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-1.5">Poids (kg)</label>
-              <input
-                type="number"
-                step="0.1"
-                value={formData.weight_kg}
-                onChange={(e) => handleInputChange('weight_kg', e.target.value)}
-                className="input-field w-full"
-                placeholder="kg"
-              />
+              <input type="number" step="0.1" min={30} max={200} value={formData.weight_kg} onChange={(e) => handleInputChange('weight_kg', e.target.value)} className="input-field w-full" placeholder="kg" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-1.5">TA systolique (mmHg)</label>
-              <input
-                type="number"
-                value={formData.blood_pressure_systolic}
-                onChange={(e) => handleInputChange('blood_pressure_systolic', e.target.value)}
-                className="input-field w-full"
-                placeholder="mmHg"
-              />
+              <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-1.5">
+                TA systolique (mmHg)
+                {Number(formData.blood_pressure_systolic) >= 140 && (
+                  <span className="ml-2 text-xs text-red-500 font-bold">HTA</span>
+                )}
+              </label>
+              <input type="number" min={60} max={250} value={formData.blood_pressure_systolic} onChange={(e) => handleInputChange('blood_pressure_systolic', e.target.value)} className={`input-field w-full ${Number(formData.blood_pressure_systolic) >= 140 ? 'border-red-400 dark:border-red-600' : ''}`} placeholder="mmHg" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-1.5">TA diastolique (mmHg)</label>
-              <input
-                type="number"
-                value={formData.blood_pressure_diastolic}
-                onChange={(e) => handleInputChange('blood_pressure_diastolic', e.target.value)}
-                className="input-field w-full"
-                placeholder="mmHg"
-              />
+              <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-1.5">
+                TA diastolique (mmHg)
+                {Number(formData.blood_pressure_diastolic) >= 90 && (
+                  <span className="ml-2 text-xs text-red-500 font-bold">HTA</span>
+                )}
+              </label>
+              <input type="number" min={30} max={180} value={formData.blood_pressure_diastolic} onChange={(e) => handleInputChange('blood_pressure_diastolic', e.target.value)} className={`input-field w-full ${Number(formData.blood_pressure_diastolic) >= 90 ? 'border-red-400 dark:border-red-600' : ''}`} placeholder="mmHg" />
             </div>
             <div>
               <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-1.5">Hauteur uterine (cm)</label>
-              <input
-                type="number"
-                step="0.5"
-                value={formData.uterine_height_cm}
-                onChange={(e) => handleInputChange('uterine_height_cm', e.target.value)}
-                className="input-field w-full"
-                placeholder="cm"
-              />
+              <input type="number" step="0.5" min={5} max={50} value={formData.uterine_height_cm} onChange={(e) => handleInputChange('uterine_height_cm', e.target.value)} className="input-field w-full" placeholder="cm" />
             </div>
             <div>
               <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-1.5">RCF (bpm)</label>
-              <input
-                type="number"
-                value={formData.fetal_heart_rate}
-                onChange={(e) => handleInputChange('fetal_heart_rate', e.target.value)}
-                className="input-field w-full"
-                placeholder="bpm"
-              />
+              <input type="number" min={60} max={220} value={formData.fetal_heart_rate} onChange={(e) => handleInputChange('fetal_heart_rate', e.target.value)} className="input-field w-full" placeholder="bpm" />
             </div>
             <div>
               <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-1.5">Glycemie (g/L)</label>
-              <input
-                type="number"
-                step="0.01"
-                value={formData.glycemia}
-                onChange={(e) => handleInputChange('glycemia', e.target.value)}
-                className="input-field w-full"
-                placeholder="g/L"
-              />
+              <input type="number" step="0.01" min={0.1} max={5.0} value={formData.glycemia} onChange={(e) => handleInputChange('glycemia', e.target.value)} className="input-field w-full" placeholder="g/L" />
             </div>
             <div>
               <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-1.5">Proteinurie</label>
-              <select
-                value={formData.proteinuria}
-                onChange={(e) => handleInputChange('proteinuria', e.target.value)}
-                className="input-field w-full"
-              >
+              <select value={formData.proteinuria} onChange={(e) => handleInputChange('proteinuria', e.target.value)} className="input-field w-full">
                 <option value="negative">Negative</option>
                 <option value="trace">Traces</option>
                 <option value="1+">1+</option>
@@ -257,11 +245,7 @@ export function ConsultationsPage() {
             </div>
             <div>
               <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-1.5">Oedemes</label>
-              <select
-                value={formData.edema}
-                onChange={(e) => handleInputChange('edema', e.target.value)}
-                className="input-field w-full"
-              >
+              <select value={formData.edema} onChange={(e) => handleInputChange('edema', e.target.value)} className="input-field w-full">
                 <option value="none">Aucun</option>
                 <option value="mild">Legers</option>
                 <option value="moderate">Moderes</option>
@@ -270,27 +254,14 @@ export function ConsultationsPage() {
             </div>
             <div>
               <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-1.5">Prochain RDV</label>
-              <input
-                type="date"
-                value={formData.next_appointment}
-                onChange={(e) => handleInputChange('next_appointment', e.target.value)}
-                className="input-field w-full"
-              />
+              <input type="date" min={today} value={formData.next_appointment} onChange={(e) => handleInputChange('next_appointment', e.target.value)} className="input-field w-full" />
             </div>
             <div className="md:col-span-2 lg:col-span-3">
               <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-1.5">Notes</label>
-              <textarea
-                rows={3}
-                value={formData.notes}
-                onChange={(e) => handleInputChange('notes', e.target.value)}
-                className="input-field w-full"
-                placeholder="Observations cliniques..."
-              />
+              <textarea rows={3} value={formData.notes} onChange={(e) => handleInputChange('notes', e.target.value)} className="input-field w-full" placeholder="Observations cliniques..." />
             </div>
             <div className="md:col-span-2 lg:col-span-3 flex justify-end gap-3">
-              <button type="button" onClick={() => setView('list')} className="btn-secondary">
-                Annuler
-              </button>
+              <button type="button" onClick={() => setView('list')} className="btn-secondary">Annuler</button>
               <button type="submit" disabled={submitting} className="btn-primary flex items-center gap-2">
                 {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
                 Enregistrer la consultation
@@ -322,7 +293,6 @@ export function ConsultationsPage() {
                       <th className="text-left py-3 px-4 text-[var(--color-text-secondary)] font-medium">Poids</th>
                       <th className="text-left py-3 px-4 text-[var(--color-text-secondary)] font-medium">RCF</th>
                       <th className="text-left py-3 px-4 text-[var(--color-text-secondary)] font-medium">Type</th>
-                      <th className="text-left py-3 px-4 text-[var(--color-text-secondary)] font-medium">Praticien</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -336,18 +306,13 @@ export function ConsultationsPage() {
                             ? `${c.blood_pressure_systolic}/${c.blood_pressure_diastolic}`
                             : '-'}
                         </td>
-                        <td className="py-3 px-4 text-[var(--color-text-secondary)]">
-                          {c.weight_kg ? `${c.weight_kg} kg` : '-'}
-                        </td>
-                        <td className="py-3 px-4 text-[var(--color-text-secondary)]">
-                          {c.fetal_heart_rate ? `${c.fetal_heart_rate} bpm` : '-'}
-                        </td>
+                        <td className="py-3 px-4 text-[var(--color-text-secondary)]">{c.weight_kg ? `${c.weight_kg} kg` : '-'}</td>
+                        <td className="py-3 px-4 text-[var(--color-text-secondary)]">{c.fetal_heart_rate ? `${c.fetal_heart_rate} bpm` : '-'}</td>
                         <td className="py-3 px-4">
                           <span className={c.consultation_type === 'urgent' ? 'badge-warning' : 'badge-info'}>
                             {typeLabels[c.consultation_type]}
                           </span>
                         </td>
-                        <td className="py-3 px-4 text-[var(--color-text-secondary)]">#{c.practitioner_id}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -355,31 +320,15 @@ export function ConsultationsPage() {
               </div>
 
               {data && data.items.length === 0 && (
-                <div className="text-center py-12 text-[var(--color-text-tertiary)]">
-                  Aucune consultation trouvee
-                </div>
+                <div className="text-center py-12 text-[var(--color-text-tertiary)]">Aucune consultation trouvee</div>
               )}
 
               {totalPages > 1 && (
                 <div className="flex items-center justify-between mt-4 pt-4 border-t border-[var(--color-border-secondary)]">
-                  <p className="text-sm text-[var(--color-text-tertiary)]">
-                    Page {page} sur {totalPages} ({data?.total} resultats)
-                  </p>
+                  <p className="text-sm text-[var(--color-text-tertiary)]">Page {page} sur {totalPages} ({data?.total} resultats)</p>
                   <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => setPage((p) => Math.max(1, p - 1))}
-                      disabled={page === 1}
-                      className="p-2 rounded-lg hover:bg-[var(--color-bg-tertiary)] disabled:opacity-30 transition-colors"
-                    >
-                      <ChevronLeft className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                      disabled={page === totalPages}
-                      className="p-2 rounded-lg hover:bg-[var(--color-bg-tertiary)] disabled:opacity-30 transition-colors"
-                    >
-                      <ChevronRight className="w-4 h-4" />
-                    </button>
+                    <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1} className="p-2 rounded-lg hover:bg-[var(--color-bg-tertiary)] disabled:opacity-30 transition-colors"><ChevronLeft className="w-4 h-4" /></button>
+                    <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="p-2 rounded-lg hover:bg-[var(--color-bg-tertiary)] disabled:opacity-30 transition-colors"><ChevronRight className="w-4 h-4" /></button>
                   </div>
                 </div>
               )}

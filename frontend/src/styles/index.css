@@ -109,3 +109,50 @@
     @apply text-red-600 dark:text-red-400;
   }
 }
+
+/* Print styles */
+@media print {
+  body {
+    background: white !important;
+    color: black !important;
+    font-size: 12px;
+  }
+
+  /* Hide navigation, header, buttons */
+  aside,
+  header,
+  button,
+  .btn-primary,
+  .btn-secondary,
+  input[type="text"],
+  .no-print {
+    display: none !important;
+  }
+
+  /* Show main content full width */
+  main {
+    padding: 0 !important;
+    overflow: visible !important;
+  }
+
+  .card {
+    border: 1px solid #ddd !important;
+    box-shadow: none !important;
+    break-inside: avoid;
+  }
+
+  table {
+    font-size: 11px;
+  }
+
+  /* Force light colors */
+  * {
+    color: black !important;
+    background: white !important;
+  }
+
+  .badge-info, .badge-warning, .badge-critical, .badge-success {
+    border: 1px solid #999;
+    padding: 2px 6px;
+  }
+}

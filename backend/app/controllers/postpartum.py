@@ -1,6 +1,10 @@
 """Post-partum follow-up endpoints."""
 
+import csv
+import io
+
 from fastapi import APIRouter, Depends, Query
+from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config.database import get_db
@@ -38,6 +42,35 @@ async def list_postpartum(
 ):
     """List post-partum visits with optional filter and pagination."""
     return await postpartum_service.list_postpartum(db, page, page_size, pregnancy_id)
+
+
+@router.get("/export/csv")
+async def export_postpartum_csv(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_permission("postpartum:read")),
+):
+    """Export all post-partum visits as CSV file."""
+    result = await postpartum_service.list_postpartum(db, page=1, page_size=10000)
+
+    output = io.StringIO()
+    writer = csv.writer(output, delimiter=";")
+    writer.writerow(["ID", "Grossesse ID", "Date", "J+", "Humeur", "Edinburgh", "Allaitement", "Involution", "Cicatrisation", "Complications", "Notes"])
+    for v in result.items:
+        writer.writerow([
+            v.id, v.pregnancy_id, v.date, v.days_postpartum,
+            v.mood_score or "", v.edinburgh_score or "",
+            v.breastfeeding_status or "", v.uterine_involution or "",
+            v.wound_healing or "",
+            ", ".join(v.complications) if v.complications else "",
+            v.notes or "",
+        ])
+
+    output.seek(0)
+    return StreamingResponse(
+        iter([output.getvalue()]),
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=postpartum_maternacare.csv"},
+    )
 
 
 @router.get("/{visit_id}", response_model=PostPartumResponse)

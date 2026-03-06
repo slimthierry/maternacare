@@ -3,7 +3,7 @@
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth.exceptions import ConflictException, NotFoundException
+from app.auth.exceptions import ConflictException, NotFoundException, ValidationException
 from app.models.delivery_models import Delivery
 from app.models.pregnancy_models import Pregnancy
 from app.models.user_models import User
@@ -26,6 +26,12 @@ async def create_delivery(
     pregnancy = result.scalar_one_or_none()
     if pregnancy is None:
         raise NotFoundException("Pregnancy", data.pregnancy_id)
+
+    # Validate delivery date is after LMP
+    if data.date < pregnancy.lmp_date:
+        raise ValidationException(
+            "La date d'accouchement ne peut pas etre anterieure a la DDR"
+        )
 
     # Check no existing delivery for this pregnancy
     existing = await db.execute(

@@ -1,6 +1,10 @@
 """Consultation management endpoints."""
 
+import csv
+import io
+
 from fastapi import APIRouter, Depends, Query
+from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config.database import get_db
@@ -61,3 +65,19 @@ async def update_consultation(
     """Update a consultation record."""
     consultation = await consultation_service.update_consultation(db, consultation_id, data)
     return ConsultationResponse.model_validate(consultation)
+
+
+@router.get("/export/csv")
+async def export_consultations_csv(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_permission("consultations:read")),
+):
+    """Export consultations as CSV."""
+    result = await consultation_service.list_consultations(db, page=1, page_size=10000)
+    output = io.StringIO()
+    writer = csv.writer(output, delimiter=";")
+    writer.writerow(["Date", "Grossesse ID", "SA", "Type", "Poids (kg)", "TA sys", "TA dia", "HU (cm)", "RCF (bpm)", "Glycemie", "Proteinurie", "Oedeme", "Prochain RDV"])
+    for c in result.items:
+        writer.writerow([c.date, c.pregnancy_id, c.gestational_week, c.consultation_type, c.weight_kg or "", c.blood_pressure_systolic or "", c.blood_pressure_diastolic or "", c.uterine_height_cm or "", c.fetal_heart_rate or "", c.glycemia or "", c.proteinuria or "", c.edema or "", c.next_appointment or ""])
+    output.seek(0)
+    return StreamingResponse(iter([output.getvalue()]), media_type="text/csv", headers={"Content-Disposition": "attachment; filename=consultations_maternacare.csv"})

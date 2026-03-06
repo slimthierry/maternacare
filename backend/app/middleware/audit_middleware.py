@@ -1,5 +1,6 @@
 """Audit middleware that logs every API request."""
 
+import logging
 import time
 from datetime import datetime, timezone
 
@@ -10,6 +11,8 @@ from starlette.responses import Response
 from app.config.database import async_session_factory
 from app.auth.security import decode_access_token
 from app.models.audit_models import AuditLog
+
+logger = logging.getLogger(__name__)
 
 
 class AuditMiddleware(BaseHTTPMiddleware):
@@ -63,8 +66,9 @@ class AuditMiddleware(BaseHTTPMiddleware):
                 session.add(audit_entry)
                 await session.commit()
         except Exception:
-            # Never let audit logging break the request
-            pass
+            logger.warning(
+                "Audit log failed for %s %s", request.method, request.url.path, exc_info=True
+            )
 
         return response
 

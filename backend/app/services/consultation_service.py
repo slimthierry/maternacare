@@ -3,7 +3,7 @@
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth.exceptions import NotFoundException
+from app.auth.exceptions import NotFoundException, ValidationException
 from app.models.consultation_models import Consultation
 from app.models.pregnancy_models import Pregnancy
 from app.models.user_models import User
@@ -20,12 +20,21 @@ async def create_consultation(
     db: AsyncSession, data: ConsultationCreate, practitioner: User
 ) -> Consultation:
     """Create a new consultation and trigger risk assessment."""
-    # Verify pregnancy exists
+    # Verify pregnancy exists and is active
     result = await db.execute(
         select(Pregnancy).where(Pregnancy.id == data.pregnancy_id)
     )
-    if result.scalar_one_or_none() is None:
+    pregnancy = result.scalar_one_or_none()
+    if pregnancy is None:
         raise NotFoundException("Pregnancy", data.pregnancy_id)
+    if pregnancy.status not in ("active", "high_risk"):
+        raise ValidationException(
+            f"Impossible d'ajouter une consultation a une grossesse au statut '{pregnancy.status}'"
+        )
+    if data.date < pregnancy.lmp_date:
+        raise ValidationException(
+            "La date de consultation ne peut pas etre anterieure a la DDR"
+        )
 
     consultation = Consultation(
         **data.model_dump(),

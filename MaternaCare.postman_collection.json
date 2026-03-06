@@ -1,0 +1,1037 @@
+{
+  "info": {
+    "name": "MaternaCare API",
+    "description": "Collection API MaternaCare - Module SIH de suivi de grossesse et santé maternelle",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{access_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:9700"
+    },
+    {
+      "key": "access_token",
+      "value": ""
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [""]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Login (Admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.collectionVariables.set('access_token', jsonData.access_token);",
+                  "    pm.test('Token saved', function () {",
+                  "        pm.expect(jsonData.access_token).to.be.a('string');",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@maternacare.dev\",\n  \"password\": \"admin123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "Login (Gynécologue)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.collectionVariables.set('access_token', jsonData.access_token);",
+                  "    pm.test('Token saved', function () {",
+                  "        pm.expect(jsonData.access_token).to.be.a('string');",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"dr.dupont@maternacare.dev\",\n  \"password\": \"medecin123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "Get Me",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/auth/me",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "auth", "me"]
+            }
+          }
+        },
+        {
+          "name": "Register User",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"sage.femme@maternacare.dev\",\n  \"password\": \"sage123\",\n  \"name\": \"Sophie Martin\",\n  \"role\": \"sage_femme\",\n  \"service\": \"Maternité\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/auth/register",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "auth", "register"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Patients",
+      "item": [
+        {
+          "name": "Create Patient",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.collectionVariables.set('patient_id', jsonData.id);",
+                  "    pm.collectionVariables.set('patient_ipp', jsonData.ipp);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ipp\": \"IPP-2026-001\",\n  \"first_name\": \"Aïcha\",\n  \"last_name\": \"Diallo\",\n  \"date_of_birth\": \"1992-05-15\",\n  \"blood_type\": \"A\",\n  \"rh_factor\": \"positive\",\n  \"phone\": \"+229 97 00 00 01\",\n  \"emergency_contact\": \"+229 97 00 00 02\",\n  \"allergies\": [\"pénicilline\"],\n  \"medical_history\": {\n    \"previous_pregnancies\": 1,\n    \"chronic_conditions\": []\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/patients/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "patients", ""]
+            }
+          }
+        },
+        {
+          "name": "List Patients",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/patients/?page=1&page_size=20",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "patients", ""],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "page_size", "value": "20" },
+                { "key": "search", "value": "", "disabled": true }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Patient by ID",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/patients/{{patient_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "patients", "{{patient_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Get Patient by IPP",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/patients/ipp/{{patient_ipp}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "patients", "ipp", "{{patient_ipp}}"]
+            }
+          }
+        },
+        {
+          "name": "Update Patient",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone\": \"+229 97 00 00 99\",\n  \"allergies\": [\"pénicilline\", \"latex\"]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/patients/{{patient_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "patients", "{{patient_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Delete Patient",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{base_url}}/api/v1/patients/{{patient_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "patients", "{{patient_id}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Pregnancies",
+      "item": [
+        {
+          "name": "Create Pregnancy",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.collectionVariables.set('pregnancy_id', jsonData.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"patient_id\": {{patient_id}},\n  \"lmp_date\": \"2025-10-01\",\n  \"estimated_due_date\": \"2026-07-08\",\n  \"gravida\": 2,\n  \"para\": 1,\n  \"notes\": \"Grossesse suivie, antécédent accouchement normal\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/pregnancies/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "pregnancies", ""]
+            }
+          }
+        },
+        {
+          "name": "List Pregnancies",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/pregnancies/?page=1&page_size=20",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "pregnancies", ""],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "page_size", "value": "20" },
+                { "key": "status", "value": "", "disabled": true },
+                { "key": "patient_id", "value": "", "disabled": true }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Pregnancy",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/pregnancies/{{pregnancy_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "pregnancies", "{{pregnancy_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Update Pregnancy",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"risk_level\": \"medium\",\n  \"notes\": \"Surveillance renforcée - HTA légère\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/pregnancies/{{pregnancy_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "pregnancies", "{{pregnancy_id}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Consultations",
+      "item": [
+        {
+          "name": "Create Consultation",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.collectionVariables.set('consultation_id', jsonData.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"pregnancy_id\": {{pregnancy_id}},\n  \"date\": \"2026-03-06\",\n  \"gestational_week\": 22,\n  \"weight_kg\": 68.5,\n  \"blood_pressure_systolic\": 120,\n  \"blood_pressure_diastolic\": 78,\n  \"uterine_height_cm\": 22.0,\n  \"fetal_heart_rate\": 145,\n  \"glycemia\": 0.85,\n  \"proteinuria\": \"negative\",\n  \"edema\": \"none\",\n  \"consultation_type\": \"routine\",\n  \"notes\": \"Consultation de routine - tout est normal\",\n  \"next_appointment\": \"2026-04-03\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/consultations/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "consultations", ""]
+            }
+          }
+        },
+        {
+          "name": "Create Consultation (Pre-eclampsia Risk)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"pregnancy_id\": {{pregnancy_id}},\n  \"date\": \"2026-03-06\",\n  \"gestational_week\": 28,\n  \"weight_kg\": 75.0,\n  \"blood_pressure_systolic\": 160,\n  \"blood_pressure_diastolic\": 100,\n  \"uterine_height_cm\": 27.0,\n  \"fetal_heart_rate\": 140,\n  \"proteinuria\": \"++\",\n  \"edema\": \"moderate\",\n  \"consultation_type\": \"urgent\",\n  \"notes\": \"HTA + protéinurie - suspicion pré-éclampsie\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/consultations/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "consultations", ""]
+            }
+          }
+        },
+        {
+          "name": "List Consultations",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/consultations/?page=1&page_size=20",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "consultations", ""],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "page_size", "value": "20" },
+                { "key": "pregnancy_id", "value": "", "disabled": true }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Consultation",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/consultations/{{consultation_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "consultations", "{{consultation_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Update Consultation",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"notes\": \"Consultation mise à jour - résultats labo reçus\",\n  \"next_appointment\": \"2026-04-10\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/consultations/{{consultation_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "consultations", "{{consultation_id}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Ultrasounds",
+      "item": [
+        {
+          "name": "Create Ultrasound (Morphology)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.collectionVariables.set('ultrasound_id', jsonData.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"pregnancy_id\": {{pregnancy_id}},\n  \"date\": \"2026-03-06\",\n  \"gestational_week\": 22,\n  \"type\": \"morphology\",\n  \"fetal_weight_g\": 450,\n  \"biparietal_diameter_mm\": 55.0,\n  \"femur_length_mm\": 38.0,\n  \"abdominal_circumference_mm\": 180.0,\n  \"amniotic_fluid_index\": 14.0,\n  \"placenta_position\": \"anterior\",\n  \"fetal_heart_rate\": 148,\n  \"anomalies_detected\": [],\n  \"notes\": \"Échographie morphologique normale\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/ultrasounds/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "ultrasounds", ""]
+            }
+          }
+        },
+        {
+          "name": "Create Ultrasound (IUGR detected)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"pregnancy_id\": {{pregnancy_id}},\n  \"date\": \"2026-03-06\",\n  \"gestational_week\": 32,\n  \"type\": \"growth\",\n  \"fetal_weight_g\": 1200,\n  \"biparietal_diameter_mm\": 72.0,\n  \"femur_length_mm\": 55.0,\n  \"abdominal_circumference_mm\": 240.0,\n  \"amniotic_fluid_index\": 4.5,\n  \"placenta_position\": \"posterior\",\n  \"fetal_heart_rate\": 155,\n  \"anomalies_detected\": [\"IUGR\", \"oligohydramnios\"],\n  \"notes\": \"RCIU suspecté - poids < 10e percentile\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/ultrasounds/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "ultrasounds", ""]
+            }
+          }
+        },
+        {
+          "name": "List Ultrasounds",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/ultrasounds/?page=1&page_size=20",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "ultrasounds", ""],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "page_size", "value": "20" },
+                { "key": "pregnancy_id", "value": "", "disabled": true }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Ultrasound",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/ultrasounds/{{ultrasound_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "ultrasounds", "{{ultrasound_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Update Ultrasound",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"notes\": \"Relecture confirmée - morphologie normale\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/ultrasounds/{{ultrasound_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "ultrasounds", "{{ultrasound_id}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Deliveries",
+      "item": [
+        {
+          "name": "Create Delivery",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.collectionVariables.set('delivery_id', jsonData.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"pregnancy_id\": {{pregnancy_id}},\n  \"date\": \"2026-07-05\",\n  \"gestational_week\": 39,\n  \"delivery_type\": \"vaginal_spontaneous\",\n  \"labor_duration_hours\": 8.5,\n  \"complications\": [],\n  \"anesthesia_type\": \"epidural\",\n  \"blood_loss_ml\": 350,\n  \"notes\": \"Accouchement par voie basse sans complications\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/deliveries/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "deliveries", ""]
+            }
+          }
+        },
+        {
+          "name": "List Deliveries",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/deliveries/?page=1&page_size=20",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "deliveries", ""],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "page_size", "value": "20" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Delivery",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/deliveries/{{delivery_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "deliveries", "{{delivery_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Update Delivery",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"notes\": \"Mise à jour - sutures périnéales effectuées\",\n  \"blood_loss_ml\": 400\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/deliveries/{{delivery_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "deliveries", "{{delivery_id}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Newborns",
+      "item": [
+        {
+          "name": "Create Newborn",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.collectionVariables.set('newborn_id', jsonData.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"delivery_id\": {{delivery_id}},\n  \"first_name\": \"Amina\",\n  \"sex\": \"F\",\n  \"weight_g\": 3200,\n  \"height_cm\": 50.0,\n  \"head_circumference_cm\": 34.5,\n  \"blood_type\": \"A\",\n  \"rh_factor\": \"positive\",\n  \"apgar_1min\": 8,\n  \"apgar_5min\": 9,\n  \"apgar_10min\": 10,\n  \"resuscitation_needed\": false,\n  \"nicu_admission\": false,\n  \"notes\": \"Nouveau-né en bonne santé\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/newborns/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "newborns", ""]
+            }
+          }
+        },
+        {
+          "name": "Create Newborn (Low APGAR)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"delivery_id\": {{delivery_id}},\n  \"first_name\": \"Bébé Test\",\n  \"sex\": \"M\",\n  \"weight_g\": 2400,\n  \"height_cm\": 46.0,\n  \"head_circumference_cm\": 32.0,\n  \"apgar_1min\": 4,\n  \"apgar_5min\": 6,\n  \"resuscitation_needed\": true,\n  \"nicu_admission\": true,\n  \"notes\": \"APGAR bas - réanimation néonatale\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/newborns/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "newborns", ""]
+            }
+          }
+        },
+        {
+          "name": "List Newborns",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/newborns/?page=1&page_size=20",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "newborns", ""],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "page_size", "value": "20" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Newborn",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/newborns/{{newborn_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "newborns", "{{newborn_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Update Newborn",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"first_name\": \"Amina Diallo\",\n  \"notes\": \"Prise de poids normale à J3\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/newborns/{{newborn_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "newborns", "{{newborn_id}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Post-Partum",
+      "item": [
+        {
+          "name": "Create PostPartum Visit",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.collectionVariables.set('postpartum_id', jsonData.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"pregnancy_id\": {{pregnancy_id}},\n  \"date\": \"2026-07-08\",\n  \"days_postpartum\": 3,\n  \"mood_score\": 7,\n  \"edinburgh_score\": 5,\n  \"breastfeeding_status\": \"exclusive\",\n  \"uterine_involution\": \"normal\",\n  \"wound_healing\": \"good\",\n  \"complications\": [],\n  \"notes\": \"Visite post-partum J3 - bon état général\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/postpartum/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "postpartum", ""]
+            }
+          }
+        },
+        {
+          "name": "Create PostPartum (Depression Risk)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"pregnancy_id\": {{pregnancy_id}},\n  \"date\": \"2026-07-20\",\n  \"days_postpartum\": 15,\n  \"mood_score\": 3,\n  \"edinburgh_score\": 18,\n  \"breastfeeding_status\": \"mixed\",\n  \"uterine_involution\": \"normal\",\n  \"wound_healing\": \"good\",\n  \"complications\": [],\n  \"notes\": \"Edinburgh score élevé - risque dépression post-partum\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/postpartum/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "postpartum", ""]
+            }
+          }
+        },
+        {
+          "name": "List PostPartum Visits",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/postpartum/?page=1&page_size=20",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "postpartum", ""],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "page_size", "value": "20" },
+                { "key": "pregnancy_id", "value": "", "disabled": true }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get PostPartum Visit",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/postpartum/{{postpartum_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "postpartum", "{{postpartum_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Update PostPartum Visit",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"mood_score\": 8,\n  \"edinburgh_score\": 4,\n  \"notes\": \"Amélioration notable après suivi psychologique\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/postpartum/{{postpartum_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "postpartum", "{{postpartum_id}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Alerts",
+      "item": [
+        {
+          "name": "Create Alert",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.collectionVariables.set('alert_id', jsonData.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"pregnancy_id\": {{pregnancy_id}},\n  \"type\": \"pre_eclampsia\",\n  \"severity\": \"critical\",\n  \"description\": \"HTA sévère + protéinurie significative détectée\",\n  \"auto_generated\": false\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/alerts/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "alerts", ""]
+            }
+          }
+        },
+        {
+          "name": "List Alerts",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/alerts/?page=1&page_size=20",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "alerts", ""],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "page_size", "value": "20" },
+                { "key": "status", "value": "", "disabled": true },
+                { "key": "severity", "value": "", "disabled": true },
+                { "key": "pregnancy_id", "value": "", "disabled": true }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Alert",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/alerts/{{alert_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "alerts", "{{alert_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Acknowledge Alert",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{base_url}}/api/v1/alerts/{{alert_id}}/acknowledge",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "alerts", "{{alert_id}}", "acknowledge"]
+            }
+          }
+        },
+        {
+          "name": "Resolve Alert",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"notes\": \"Patiente prise en charge - traitement antihypertenseur initié\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/alerts/{{alert_id}}/resolve",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "alerts", "{{alert_id}}", "resolve"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Dashboard",
+      "item": [
+        {
+          "name": "Get Dashboard",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/dashboard/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "dashboard", ""]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Audit",
+      "item": [
+        {
+          "name": "List Audit Logs",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/audit/?page=1&page_size=20",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "audit", ""],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "page_size", "value": "20" },
+                { "key": "user_id", "value": "", "disabled": true },
+                { "key": "entity_type", "value": "", "disabled": true },
+                { "key": "action", "value": "", "disabled": true }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "FHIR",
+      "item": [
+        {
+          "name": "Search Patients",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/fhir/Patient/?name=Diallo",
+              "host": ["{{base_url}}"],
+              "path": ["api", "fhir", "Patient", ""],
+              "query": [
+                { "key": "name", "value": "Diallo" },
+                { "key": "identifier", "value": "", "disabled": true }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Patient by IPP",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/fhir/Patient/{{patient_ipp}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "fhir", "Patient", "{{patient_ipp}}"]
+            }
+          }
+        },
+        {
+          "name": "Search Conditions",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/fhir/Condition/?patient={{patient_ipp}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "fhir", "Condition", ""],
+              "query": [
+                { "key": "patient", "value": "{{patient_ipp}}" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Search Observations",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/fhir/Observation/?patient={{patient_ipp}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "fhir", "Observation", ""],
+              "query": [
+                { "key": "patient", "value": "{{patient_ipp}}" },
+                { "key": "code", "value": "", "disabled": true }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Search Encounters",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/fhir/Encounter/?patient={{patient_ipp}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "fhir", "Encounter", ""],
+              "query": [
+                { "key": "patient", "value": "{{patient_ipp}}" }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Health Check",
+      "item": [
+        {
+          "name": "Health",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/health",
+              "host": ["{{base_url}}"],
+              "path": ["health"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

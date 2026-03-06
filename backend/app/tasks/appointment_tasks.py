@@ -23,11 +23,20 @@ def _run_async(coro):
         loop.close()
 
 
-@celery_app.task(name="app.tasks.appointment_tasks.send_appointment_reminders")
-def send_appointment_reminders() -> int:
+@celery_app.task(
+    name="app.tasks.appointment_tasks.send_appointment_reminders",
+    bind=True,
+    max_retries=2,
+    default_retry_delay=300,
+)
+def send_appointment_reminders(self) -> int:
     """Send reminders for appointments scheduled within the next 48 hours."""
     logger.info("Sending appointment reminders...")
-    return _run_async(_send_appointment_reminders_async())
+    try:
+        return _run_async(_send_appointment_reminders_async())
+    except Exception as exc:
+        logger.error("send_appointment_reminders failed (attempt %d): %s", self.request.retries + 1, exc)
+        raise self.retry(exc=exc)
 
 
 async def _send_appointment_reminders_async() -> int:
