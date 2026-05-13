@@ -90,7 +90,7 @@ export function LoginPage() {
             </div>
 
             {error && (
-              <div className="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm px-4 py-3 rounded-lg">
+              <div className="alert-error">
                 {error}
               </div>
             )}

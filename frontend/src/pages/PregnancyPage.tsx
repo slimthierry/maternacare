@@ -75,7 +75,7 @@ export function PregnancyPage() {
 
   useEffect(() => {
     if (view === 'form') {
-      patients.list(1, 200).then((res) => setPatientList(res.items)).catch(() => {});
+      patients.list(1, 100).then((res) => setPatientList(res.items)).catch(() => {});
     }
   }, [view]);
 

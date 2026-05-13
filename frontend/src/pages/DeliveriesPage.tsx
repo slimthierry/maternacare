@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { HeartPulse, Plus, List, Loader2, ChevronLeft, ChevronRight, Download, Printer } from 'lucide-react';
+import { HeartPulse, Plus, List, Loader2, ChevronLeft, ChevronRight, Download, Printer, CheckCircle2 } from 'lucide-react';
 import type { Delivery, Pregnancy, PaginatedResponse } from '../types';
 import { deliveries, pregnancies } from '../services/api';
 
@@ -28,6 +28,7 @@ export function DeliveriesPage() {
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
+  const [success, setSuccess] = useState('');
 
   const [formData, setFormData] = useState({
     pregnancy_id: '',
@@ -93,6 +94,8 @@ export function DeliveriesPage() {
       await deliveries.create(payload as Partial<Delivery>);
       setView('list');
       setPage(1);
+      setSuccess('Accouchement enregistre avec succes');
+      setTimeout(() => setSuccess(''), 4000);
       fetchData();
     } catch (e) {
       setSubmitError(e instanceof Error ? e.message : "Erreur lors de l'enregistrement");
@@ -131,10 +134,16 @@ export function DeliveriesPage() {
         </div>
       </div>
 
+      {success && (
+        <div className="flex items-center gap-2 p-3 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 text-sm">
+          <CheckCircle2 className="w-4 h-4 flex-shrink-0" />{success}
+        </div>
+      )}
+
       {view === 'form' ? (
         <div className="card p-6">
           <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-6">Enregistrer un accouchement</h3>
-          {submitError && <div className="mb-4 p-3 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm">{submitError}</div>}
+          {submitError && <div className="alert-error mb-4">{submitError}</div>}
           <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <div>
               <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-1.5">Grossesse *</label>

@@ -130,7 +130,7 @@ export function PostPartumPage() {
       {view === 'form' ? (
         <div className="card p-6">
           <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-6">Enregistrer une visite post-partum</h3>
-          {submitError && <div className="mb-4 p-3 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm">{submitError}</div>}
+          {submitError && <div className="alert-error mb-4">{submitError}</div>}
           <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <div>
               <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-1.5">Grossesse *</label>
